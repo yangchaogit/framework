@@ -33,4 +33,7 @@ $db['slave'] = array(
     'persistent' => false, //MySQL长连接
 );
 
-return $db;
+//@todo
+return array();
+
+//return $db;
