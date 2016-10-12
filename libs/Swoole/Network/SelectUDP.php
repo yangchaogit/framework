@@ -27,6 +27,15 @@ class SelectUDP extends \Swoole\Server\Base implements \Swoole\UDP_Server_Driver
             }
         }
     }
+    function send($client_id, $data)
+    {
+    
+    }
+    
+    function close($client_id)
+    {
+    
+    }
     /**
      * 运行服务器程序
      * @return unknown_type

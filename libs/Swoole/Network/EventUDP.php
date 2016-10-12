@@ -21,6 +21,17 @@ class EventUDP extends \Swoole\Server\Base implements \Swoole\UDP_Server_Driver
 	{
 		parent::__construct($host,$port,$timeout=30);
 	}
+	
+	function send($client_id, $data)
+	{
+	
+	}
+	
+	function close($client_id)
+	{
+	
+	}
+	
     /**
      * 运行服务器程序
      * @return unknown_type

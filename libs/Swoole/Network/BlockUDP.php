@@ -8,6 +8,17 @@ class SelectUDP extends \Swoole\Server\Base
     {
         parent::__construct($host,$port,$timeout=30);
     }
+    
+    function send($client_id, $data) 
+    {
+        
+    }
+    
+    function close($client_id) 
+    {
+        
+    }
+    
     function server_loop()
     {
         while(true)
