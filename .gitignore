@@ -5,3 +5,6 @@
 /examples/websocket.log
 /logs/
 *.pid
+.buildpath
+.project
+.settings
