@@ -9,6 +9,10 @@ class UDPQueue implements Swoole\IFace\Protocol
     {
         $this->queue = new FileQueue(array('name'=>$name));
     }
+    function onConnect($client_id)
+    {
+        
+    }
     function onReceive($serv, $fd, $from_id, $data)
     {
         $this->queue->put($data);
@@ -24,6 +28,11 @@ class UDPQueue implements Swoole\IFace\Protocol
     {
         echo "server shutdown!";
     }
+    
+    function onClose($server, $client_id, $from_id)
+    {
+        
+    }
 }
 
 class TCPQueue implements Swoole\IFace\Protocol
@@ -33,7 +42,7 @@ class TCPQueue implements Swoole\IFace\Protocol
     {
         $this->queue = new FileQueue(array('name'=>$name));
     }
-    function onRecive($client_id,$data)
+    function onReceive($client_id,$data)
     {
         $this->queue->put($data);
         $this->server->log("queue in data:".$data.NL);
