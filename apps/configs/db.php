@@ -1,4 +1,5 @@
 <?php
+
 $db['master'] = array(
     'type'       => Swoole\Database::TYPE_MYSQLi,
     'host'       => "127.0.0.1",
@@ -33,7 +34,4 @@ $db['slave'] = array(
     'persistent' => false, //MySQL长连接
 );
 
-//@todo
-return array();
-
-//return $db;
+return $db;
