@@ -1,6 +1,8 @@
 <?php
 namespace Swoole\Client;
+use Swoole\Exception\InvalidParam;
 use Swoole\Protocol\SOAServer;
+use Swoole\Tool;
 
 class SOA
 {
@@ -10,11 +12,6 @@ class SOA
      */
     protected $servers = array();
 
-    /**
-     * 当前选择的Server
-     * @var int
-     */
-    protected $currentServerId;
     protected $requestIndex = 0;
 
     protected $env = array();
@@ -33,6 +30,7 @@ class SOA
     protected $haveSockets = false;
 
     const OK = 0;
+    const VERSION = 1001;
 
     protected static $_instances = array();
 
@@ -131,7 +129,23 @@ class SOA
                     'package_body_offset' => SOAServer::HEADER_SIZE,
                     'package_length_offset' => 0,
                 ));
-                $ret = $socket->connect($svr['host'], $svr['port'], $this->timeout);
+                /**
+                 * 尝试重连一次
+                 */
+                for ($i = 0; $i < 2; $i++)
+                {
+                    $ret = $socket->connect($svr['host'], $svr['port'], $this->timeout);
+                    if ($ret === false and ($socket->errCode == 114 or $socket->errCode == 115))
+                    {
+                        //强制关闭，重连
+                        $socket->close(true);
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
                 $socketFd = $socket->sock;
             }
             //基于sockets扩展
@@ -241,6 +255,21 @@ class SOA
         $this->env[$k] = $v;
     }
 
+
+    /**
+     * 设置超时时间，包括连接超时和接收超时
+     * @param $timeout
+     */
+    function setTimeout($timeout)
+    {
+        $this->timeout = $timeout;
+    }
+
+    /**
+     * 设置用户名和密码
+     * @param $user
+     * @param $password
+     */
     function auth($user, $password)
     {
         $this->putEnv('user', $user);
@@ -289,11 +318,50 @@ class SOA
     {
         if (isset($servers['host']))
         {
+            self::formatServerConfig($servers);
             $this->servers[] = $servers;
         }
         else
         {
-            $this->servers = array_merge($this->servers, $servers);
+            //兼容老的写法
+            foreach ($servers as $svr)
+            {
+                // 127.0.0.1:8001 的写法
+                if (is_string($svr))
+                {
+                    list($config['host'], $config['port']) = explode(':', $svr);
+                }
+                else
+                {
+                    $config = $svr;
+                }
+                self::formatServerConfig($config);
+                $this->servers[] = $config;
+            }
+        }
+    }
+
+    /**
+     * @param $config
+     * @throws InvalidParam
+     */
+    static protected function formatServerConfig(&$config)
+    {
+        if (empty($config['host']))
+        {
+            throw new InvalidParam("require 'host' option.");
+        }
+        if (empty($config['port']))
+        {
+            throw new InvalidParam("require 'port' option.");
+        }
+        if (empty($config['status']))
+        {
+            $config['status'] = 'online';
+        }
+        if (empty($config['weight']))
+        {
+            $config['weight'] = 100;
         }
     }
 
@@ -303,6 +371,10 @@ class SOA
      */
     function setServers(array $servers)
     {
+        foreach($servers as &$svr)
+        {
+            self::formatServerConfig($svr);
+        }
         $this->servers = $servers;
     }
 
@@ -317,22 +389,26 @@ class SOA
         {
             throw new \Exception("servers config empty.");
         }
-        //随机选择1个Server
-        $this->currentServerId = array_rand($this->servers);
-        $_svr = $this->servers[$this->currentServerId];
-        $svr = array('host' => '', 'port' => 0);
-        list($svr['host'], $svr['port']) = explode(':', $_svr, 2);
-        return $svr;
+        return Tool::getServer($this->servers);
     }
 
     /**
      * 连接服务器失败了
      * @param $svr
+     * @return bool
      */
     function onConnectServerFailed($svr)
     {
-        //从Server列表中移除
-        unset($this->servers[$this->currentServerId]);
+        foreach($this->servers as $k => $v)
+        {
+            if ($v['host'] == $svr['host'] and $v['port'] == $svr['port'])
+            {
+                //从Server列表中移除
+                unset($this->servers[$k]);
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
